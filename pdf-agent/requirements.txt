@@ -1,0 +1,13 @@
+arize>=8.0.0
+arize-otel
+openinference-instrumentation-openai
+openinference-instrumentation
+openinference-semantic-conventions
+openai
+pydantic>=2.0
+pypdf
+reportlab
+python-dotenv
+pandas
+opentelemetry-api
+opentelemetry-sdk

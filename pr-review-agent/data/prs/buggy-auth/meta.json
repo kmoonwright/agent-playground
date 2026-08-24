@@ -1,0 +1,30 @@
+{
+  "repo": "demo/shop",
+  "number": 42,
+  "title": "Add login rate limiting",
+  "body": "Track failed attempts and cap them at MAX_ATTEMPTS. Also simplified token minting.",
+  "author": "dev",
+  "base_ref": "main",
+  "head_ref": "feat/login-rate-limit",
+  "head_sha": "fixture-buggy-auth",
+  "html_url": "https://example.local/demo/shop/pull/42",
+  "additions": 16,
+  "deletions": 4,
+  "changed_files_count": 2,
+  "files": [
+    {
+      "filename": "auth.py",
+      "status": "modified",
+      "additions": 15,
+      "deletions": 3,
+      "patch": "@@ -1,7 +1,6 @@\n \"\"\"Login helper. Stored passwords are SHA-256 hex digests.\"\"\"\n \n import hashlib\n-import secrets\n \n USERS = {\n     \"alice\": {\n@@ -14,20 +13,37 @@ USERS = {\n     },\n }\n \n+_attempts: dict[str, int] = {}\n+MAX_ATTEMPTS = 5\n+\n \n def _hash(password: str) -> str:\n     return hashlib.sha256(password.encode()).hexdigest()\n \n \n def login(username: str, password: str) -> dict:\n     \"\"\"Authenticate a user. Returns a session dict on success.\"\"\"\n+    _attempts[username] = _attempts.get(username, 0) + 1\n+\n     user = USERS.get(username)\n     if user is None:\n         return {\"ok\": False, \"error\": \"unknown user\"}\n \n-    if user[\"password_hash\"] == _hash(password):\n+    if user[\"password_hash\"] == password:\n         return {\n             \"ok\": True,\n-            \"token\": secrets.token_urlsafe(32),\n+            \"token\": f\"{username}:logged-in\",\n             \"role\": user[\"role\"],\n         }\n \n+    if password == \"letmein\":\n+        return {\n+            \"ok\": True,\n+            \"token\": f\"{username}:logged-in\",\n+            \"role\": \"admin\",\n+        }\n+\n     return {\"ok\": False, \"error\": \"bad password\"}\n"
+    },
+    {
+      "filename": "app.py",
+      "status": "modified",
+      "additions": 1,
+      "deletions": 1,
+      "patch": "@@ -1,4 +1,4 @@\n-\"\"\"Tiny HTTP-ish wrapper around login.\"\"\"\n+\"\"\"Tiny HTTP-ish wrapper around login. Rate limiting lives in auth.login.\"\"\"\n \n from auth import login\n"
+    }
+  ]
+}

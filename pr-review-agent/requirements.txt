@@ -1,0 +1,9 @@
+arize-otel
+openinference-instrumentation-openai
+openinference-instrumentation
+openinference-semantic-conventions
+openai
+pydantic>=2.0
+python-dotenv
+opentelemetry-api
+opentelemetry-sdk

@@ -1,0 +1,3 @@
+cache/
+data/crate/*
+!data/crate/.gitkeep

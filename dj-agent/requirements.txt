@@ -1,0 +1,26 @@
+# Audio
+numpy
+soundfile
+librosa
+sounddevice
+mutagen
+
+# Sources
+requests
+
+# Agents
+anthropic
+openai
+pydantic>=2.0
+python-dotenv
+
+# Tracing (Arize AX via OpenInference / OpenTelemetry)
+arize-otel
+openinference-instrumentation
+openinference-instrumentation-anthropic
+openinference-instrumentation-openai
+opentelemetry-api
+opentelemetry-sdk
+
+# Tests
+pytest

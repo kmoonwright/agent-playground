@@ -1,0 +1,52 @@
+[
+  {
+    "question": "What are the eleven OpenInference span kinds?",
+    "expected_doc_id": "span-kinds",
+    "expected_answer_summary": "Lists all eleven kinds: LLM, CHAIN, AGENT, TOOL, RETRIEVER, EMBEDDING, RERANKER, GUARDRAIL, EVALUATOR, PROMPT, and UNKNOWN."
+  },
+  {
+    "question": "What's the difference between an EMBEDDING span and a RETRIEVER span?",
+    "expected_doc_id": "span-kinds",
+    "expected_answer_summary": "EMBEDDING is encoding data into a vector; RETRIEVER is querying a datastore for relevant context, such as a vector similarity search."
+  },
+  {
+    "question": "Who orchestrates an online evaluator versus an offline evaluator on Arize AX?",
+    "expected_doc_id": "evaluators-online-vs-offline",
+    "expected_answer_summary": "Arize orchestrates online evaluators automatically on its platform; you orchestrate offline evaluators yourself, outside the platform."
+  },
+  {
+    "question": "Does MCPInstrumentor create its own spans when tracing an MCP call?",
+    "expected_doc_id": "mcp-tracing",
+    "expected_answer_summary": "No, it emits no spans of its own. It only propagates OpenTelemetry context across the wire protocol so independently-created client and server spans join into one trace."
+  },
+  {
+    "question": "Why can't an MCP server using stdio transport print debug output to stdout?",
+    "expected_doc_id": "mcp-tracing",
+    "expected_answer_summary": "Stdout is the JSON-RPC wire protocol itself for a stdio-transport server, so printing there corrupts the message framing."
+  },
+  {
+    "question": "What function sets up Arize tracing, and what do you do with what it returns?",
+    "expected_doc_id": "tracing-setup",
+    "expected_answer_summary": "Call arize.otel.register() with space_id, api_key, and project_name to get a TracerProvider, then pass that provider to an OpenInference instrumentor's instrument(tracer_provider=...) call."
+  },
+  {
+    "question": "What's the difference between code-based evals and LLM-as-a-judge evals?",
+    "expected_doc_id": "llm-evaluation-metrics",
+    "expected_answer_summary": "Code evals use deterministic logic, are fast and cheap but limited to verifiable conditions. LLM-as-a-judge scores semantic qualities against a rubric and needs validation against human labels."
+  },
+  {
+    "question": "Name the five silent agent failure modes described for production reliability.",
+    "expected_doc_id": "agent-reliability",
+    "expected_answer_summary": "False completion, no-progress behavior, partial completion, constraint loss, and harmful success."
+  },
+  {
+    "question": "How could an Arize AX online evaluator implement the groundedness metric described in the LLM evaluation guide?",
+    "expected_doc_id": "llm-evaluation-metrics",
+    "expected_answer_summary": "An online LLM-as-a-judge evaluator, configured in the Arize AX UI, could score groundedness continuously on live traces rather than requiring you to run that check yourself offline."
+  },
+  {
+    "question": "What is Arize's Enterprise pricing?",
+    "expected_doc_id": null,
+    "expected_answer_summary": "Not covered in these docs."
+  }
+]

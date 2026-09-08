@@ -18,7 +18,10 @@ ROOT = Path(__file__).resolve().parent
 
 # Scoped to this project's own directory, not the cwd — same as the sibling
 # demos, so running `python ../dj-agent/dj.py` still picks up the right .env.
-load_dotenv(ROOT / ".env")
+# override=True is load-bearing in this repo: a shell that previously ran
+# pdf-agent will still have ARIZE_PROJECT_NAME=pdf-extraction-demo, and the
+# default (override=False) would keep sending DJ traces to that project.
+load_dotenv(ROOT / ".env", override=True)
 
 CACHE_DIR = ROOT / "cache"
 TRACKS_DIR = CACHE_DIR / "tracks"

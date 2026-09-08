@@ -1,0 +1,28 @@
+[project]
+name = "anydocs-agent"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = [
+    "openai",
+    "arize>=8.0.0",
+    "arize-otel",
+    "openinference-instrumentation",
+    "openinference-instrumentation-openai",
+    "openinference-instrumentation-mcp",
+    "mcp",
+    "opentelemetry-api",
+    "opentelemetry-sdk",
+    "pydantic>=2.0",
+    "python-dotenv",
+    "numpy",
+]
+
+[dependency-groups]
+dev = ["pytest", "pytest-asyncio"]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+

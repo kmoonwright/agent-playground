@@ -1,8 +1,8 @@
 # Agent playground
 
-Four small, self-contained Python demos of LLM work instrumented with OpenInference and evaluated in [Arize AX](https://app.arize.com). Each directory has its own venv (or `uv` project), `.env`, and README.
+Five small, self-contained Python demos of LLM work instrumented with OpenInference and evaluated in [Arize AX](https://app.arize.com). Each directory has its own venv (or `uv` project), `.env`, and README.
 
-They are meant to be read side by side. Same tracing shape (CHAIN → nested spans → auto-instrumented LLM calls), four different control flows: a **pipeline**, a **single agent**, a **multi-agent system running against a realtime deadline**, and a **multi-agent system with a real cross-process MCP call**.
+They are meant to be read side by side. Same tracing shape (CHAIN → nested spans → auto-instrumented LLM calls), five different control flows: a **pipeline**, a **single agent**, a **multi-agent system running against a realtime deadline**, a **multi-agent system with a real cross-process MCP call**, and a **LangGraph pipeline with audio input**.
 
 | Directory | What it is | Start here |
 |---|---|---|
@@ -10,5 +10,6 @@ They are meant to be read side by side. Same tracing shape (CHAIN → nested spa
 | [`pr-review-agent/`](pr-review-agent/README.md) | Visible tool-calling loop that reviews a PR. Lite port of the [OpenHands + Arize workshop](https://github.com/nikanand04/openhands-arize-workshop) reviewer, without the SDK. | `python review.py --fixture buggy-auth` |
 | [`dj-agent/`](dj-agent/README.md) | Live DJ. A host agent delegates crate-digging and transition-planning to sub-agents while beatmatched audio plays through the speakers. Shows cross-thread span propagation and an agent that is deliberately kept *out* of the deadline path. | `python dj.py --make-test-crate && python dj.py --offline --source local --provider rule` |
 | [`anydocs-agent/`](anydocs-agent/README.md) | Q&A over a docs corpus. A host agent delegates search to a librarian sub-agent — once per sub-topic on a compound question, not just once — which calls a real MCP server (a separate OS process) over stdio. Bundled corpus is Arize AX/OpenInference concept docs, so the agent explaining Arize AX is itself traced by Arize AX. `uv`-managed. | `uv sync && uv run python cli.py --selftest` |
+| [`audio-agent/`](audio-agent/README.md) | Transcribes an audio clip, analyzes it, and replies. Built as a **LangGraph** graph instead of raw SDK calls, so `openinference-instrumentation-langchain` turns the graph's own node structure into spans, alongside a hand-instrumented raw Whisper call. `uv`-managed. | `uv sync && uv run python cli.py --selftest` |
 
-`pdf-agent` and `pr-review-agent` want Python 3.11+; `dj-agent` wants 3.12+ (librosa 1.0); `anydocs-agent` wants 3.11+ and uses `uv` instead of a plain venv. Copy each demo's `.env.example` to `.env` and fill in the keys that README describes — all four degrade gracefully without them, and `dj-agent` runs its whole audio path with no credentials at all.
+`pdf-agent` and `pr-review-agent` want Python 3.11+; `dj-agent` wants 3.12+ (librosa 1.0); `anydocs-agent` and `audio-agent` want 3.11+ and use `uv` instead of a plain venv. Copy each demo's `.env.example` to `.env` and fill in the keys that README describes — all five degrade gracefully without them, and `dj-agent` runs its whole audio path with no credentials at all.

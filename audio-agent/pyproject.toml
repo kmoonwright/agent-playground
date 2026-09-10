@@ -1,0 +1,29 @@
+[project]
+name = "audio-agent"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = [
+    "openai",
+    "langgraph",
+    "langchain-core",
+    "langchain-openai",
+    "langchain-anthropic",
+    "arize>=8.0.0",
+    "arize-otel",
+    "openinference-instrumentation",
+    "openinference-instrumentation-openai",
+    "openinference-instrumentation-langchain",
+    "openinference-semantic-conventions",
+    "opentelemetry-api",
+    "opentelemetry-sdk",
+    "pydantic>=2.0",
+    "python-dotenv",
+    "numpy",
+    "soundfile",
+]
+
+[dependency-groups]
+dev = ["pytest"]
+
+[tool.uv]
+package = false

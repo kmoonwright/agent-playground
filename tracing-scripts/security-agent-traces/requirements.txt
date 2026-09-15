@@ -1,0 +1,5 @@
+arize-otel
+openinference-semantic-conventions
+openinference-instrumentation
+opentelemetry-sdk
+python-dotenv

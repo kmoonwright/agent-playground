@@ -1,0 +1,210 @@
+[
+  {
+    "user_id": "P01",
+    "name": "Jordan K.",
+    "credit_score": 548,
+    "score_band": "poor",
+    "accounts": [
+      {"account_id": "A-1001", "type": "secured_credit_card", "status": "open", "balance": 210},
+      {"account_id": "A-1002", "type": "installment_loan", "status": "open", "balance": 1450}
+    ],
+    "disputable_items": [
+      {"item_id": "DI-01", "description": "Collections account from 'Meridian Recovery' for $340, no billing statements on file", "dispute_eligible": true, "reason": "no supporting documentation provided by the furnisher"}
+    ],
+    "report_summary": "Jordan has a poor score (548) driven by one unverified collections account and thin credit history. No late payments in the last 6 months."
+  },
+  {
+    "user_id": "P02",
+    "name": "Amara T.",
+    "credit_score": 561,
+    "score_band": "poor",
+    "accounts": [
+      {"account_id": "A-1003", "type": "secured_credit_card", "status": "open", "balance": 95}
+    ],
+    "disputable_items": [],
+    "report_summary": "Amara has a poor score (561) mostly due to short credit history (4 months). No disputable items on file."
+  },
+  {
+    "user_id": "P03",
+    "name": "Devon R.",
+    "credit_score": 573,
+    "score_band": "poor",
+    "accounts": [
+      {"account_id": "A-1004", "type": "credit_builder_loan", "status": "open", "balance": 600},
+      {"account_id": "A-1005", "type": "retail_card", "status": "closed", "balance": 0}
+    ],
+    "disputable_items": [
+      {"item_id": "DI-02", "description": "Late payment reported for March on the closed retail card", "dispute_eligible": false, "reason": "payment was confirmed late by the furnisher, not eligible for dispute"}
+    ],
+    "report_summary": "Devon has a poor score (573) with one confirmed late payment weighing on the report; the credit-builder loan is in good standing."
+  },
+  {
+    "user_id": "P04",
+    "name": "Priya N.",
+    "credit_score": 579,
+    "score_band": "poor",
+    "accounts": [
+      {"account_id": "A-1006", "type": "secured_credit_card", "status": "open", "balance": 340}
+    ],
+    "disputable_items": [
+      {"item_id": "DI-03", "description": "Duplicate collections entry for the same $120 medical bill, listed twice under two agency names", "dispute_eligible": true, "reason": "duplicate reporting of a single debt"}
+    ],
+    "report_summary": "Priya has a poor score (579) due largely to a duplicated collections entry inflating her balances."
+  },
+  {
+    "user_id": "P05",
+    "name": "Miguel S.",
+    "credit_score": 601,
+    "score_band": "fair",
+    "accounts": [
+      {"account_id": "A-1007", "type": "secured_credit_card", "status": "open", "balance": 180},
+      {"account_id": "A-1008", "type": "auto_loan", "status": "open", "balance": 8200}
+    ],
+    "disputable_items": [
+      {"item_id": "DI-04", "description": "Auto loan reported 30 days past due for January", "dispute_eligible": false, "reason": "payment was actually late; furnisher records match Miguel's own statements"}
+    ],
+    "report_summary": "Miguel has a fair score (601). One genuinely late auto loan payment is the main drag; the secured card is in good standing."
+  },
+  {
+    "user_id": "P06",
+    "name": "Elena V.",
+    "credit_score": 614,
+    "score_band": "fair",
+    "accounts": [
+      {"account_id": "A-1009", "type": "secured_credit_card", "status": "open", "balance": 60},
+      {"account_id": "A-1010", "type": "credit_builder_loan", "status": "open", "balance": 300}
+    ],
+    "disputable_items": [],
+    "report_summary": "Elena has a fair score (614) and a clean recent history; both accounts are in good standing with low utilization."
+  },
+  {
+    "user_id": "P07",
+    "name": "Terrence B.",
+    "credit_score": 628,
+    "score_band": "fair",
+    "accounts": [
+      {"account_id": "A-1011", "type": "secured_credit_card", "status": "open", "balance": 420},
+      {"account_id": "A-1012", "type": "student_loan", "status": "open", "balance": 9100}
+    ],
+    "disputable_items": [
+      {"item_id": "DI-05", "description": "Student loan balance reported as $12,400, but Terrence's servicer statement shows $9,100", "dispute_eligible": true, "reason": "reported balance does not match the furnisher's own servicing records"}
+    ],
+    "report_summary": "Terrence has a fair score (628). A student loan balance mismatch is likely suppressing his score."
+  },
+  {
+    "user_id": "P08",
+    "name": "Grace L.",
+    "credit_score": 642,
+    "score_band": "fair",
+    "accounts": [
+      {"account_id": "A-1013", "type": "secured_credit_card", "status": "open", "balance": 25}
+    ],
+    "disputable_items": [
+      {"item_id": "DI-06", "description": "Hard inquiry from 'Apex Lending' that Grace does not recall applying with", "dispute_eligible": true, "reason": "unrecognized inquiry, possible unauthorized pull"}
+    ],
+    "report_summary": "Grace has a fair score (642), generally strong, with one unrecognized hard inquiry worth disputing."
+  },
+  {
+    "user_id": "P09",
+    "name": "Oscar M.",
+    "credit_score": 655,
+    "score_band": "fair",
+    "accounts": [
+      {"account_id": "A-1014", "type": "secured_credit_card", "status": "open", "balance": 150},
+      {"account_id": "A-1015", "type": "installment_loan", "status": "closed", "balance": 0}
+    ],
+    "disputable_items": [],
+    "report_summary": "Oscar has a fair score (655) with a fully paid installment loan and a low-balance secured card."
+  },
+  {
+    "user_id": "P10",
+    "name": "Nadia F.",
+    "credit_score": 668,
+    "score_band": "fair",
+    "accounts": [
+      {"account_id": "A-1016", "type": "secured_credit_card", "status": "open", "balance": 310}
+    ],
+    "disputable_items": [
+      {"item_id": "DI-07", "description": "Collections entry for a gym membership Nadia canceled in writing before the disputed charge", "dispute_eligible": true, "reason": "cancellation predates the charge; furnisher has not responded to prior verification requests"}
+    ],
+    "report_summary": "Nadia has a fair score (668). A disputed gym-membership collection is the main item worth escalating."
+  },
+  {
+    "user_id": "P11",
+    "name": "Kwame O.",
+    "credit_score": 681,
+    "score_band": "good",
+    "accounts": [
+      {"account_id": "A-1017", "type": "unsecured_credit_card", "status": "open", "balance": 450},
+      {"account_id": "A-1018", "type": "auto_loan", "status": "open", "balance": 6100}
+    ],
+    "disputable_items": [],
+    "report_summary": "Kwame has a good score (681) with two well-managed accounts and no disputable items."
+  },
+  {
+    "user_id": "P12",
+    "name": "Sofia D.",
+    "credit_score": 699,
+    "score_band": "good",
+    "accounts": [
+      {"account_id": "A-1019", "type": "unsecured_credit_card", "status": "open", "balance": 220},
+      {"account_id": "A-1020", "type": "credit_builder_loan", "status": "closed", "balance": 0}
+    ],
+    "disputable_items": [
+      {"item_id": "DI-08", "description": "Address history entry linking Sofia to a property she never lived at", "dispute_eligible": true, "reason": "unverifiable/incorrect associated address, not tied to an account but eligible for correction"}
+    ],
+    "report_summary": "Sofia has a good score (699). Accounts are healthy; one stray address record is worth correcting."
+  },
+  {
+    "user_id": "P13",
+    "name": "Liam P.",
+    "credit_score": 712,
+    "score_band": "good",
+    "accounts": [
+      {"account_id": "A-1021", "type": "unsecured_credit_card", "status": "open", "balance": 90},
+      {"account_id": "A-1022", "type": "mortgage", "status": "open", "balance": 182000}
+    ],
+    "disputable_items": [],
+    "report_summary": "Liam has a good score (712) with a well-managed mortgage and low card utilization."
+  },
+  {
+    "user_id": "P14",
+    "name": "Yuki H.",
+    "credit_score": 727,
+    "score_band": "good",
+    "accounts": [
+      {"account_id": "A-1023", "type": "unsecured_credit_card", "status": "open", "balance": 340},
+      {"account_id": "A-1024", "type": "auto_loan", "status": "open", "balance": 4200}
+    ],
+    "disputable_items": [
+      {"item_id": "DI-09", "description": "Late payment reported for an auto loan that was actually enrolled in an approved deferment that month", "dispute_eligible": true, "reason": "furnisher failed to reflect the approved deferment agreement"}
+    ],
+    "report_summary": "Yuki has a good score (727). One late-payment mark looks incorrect given an approved deferment."
+  },
+  {
+    "user_id": "P15",
+    "name": "Carmen I.",
+    "credit_score": 745,
+    "score_band": "very_good",
+    "accounts": [
+      {"account_id": "A-1025", "type": "unsecured_credit_card", "status": "open", "balance": 120},
+      {"account_id": "A-1026", "type": "mortgage", "status": "open", "balance": 245000}
+    ],
+    "disputable_items": [],
+    "report_summary": "Carmen has a very good score (745) with excellent payment history across a mortgage and a low-utilization card."
+  },
+  {
+    "user_id": "P16",
+    "name": "Ben W.",
+    "credit_score": 768,
+    "score_band": "very_good",
+    "accounts": [
+      {"account_id": "A-1027", "type": "unsecured_credit_card", "status": "open", "balance": 200},
+      {"account_id": "A-1028", "type": "unsecured_credit_card", "status": "open", "balance": 0}
+    ],
+    "disputable_items": [
+      {"item_id": "DI-10", "description": "Old hard inquiry from 4 years ago still showing as active", "dispute_eligible": true, "reason": "hard inquiries must age off after 2 years; this one is stale and should be removed"}
+    ],
+    "report_summary": "Ben has a very good score (768). One stale hard inquiry past its reporting window is worth cleaning up."
+  }
+]

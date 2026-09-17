@@ -5,3 +5,5 @@ __pycache__/
 .env
 data/dataset.csv
 .last_run.json
+.vercel
+.env*

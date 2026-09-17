@@ -55,6 +55,56 @@ uv run python generate_traces.py --guardrail-only --count 6   # just want the gu
 uv run python generate_sessions.py --sessions 8                # multi-turn conversations, grouped by session.id
 ```
 
+## Deploy as an AX Remote Agent (Vercel)
+
+`POST /remote-agent` (in `server.py`) matches Arize AX's [Remote Agent
+contract](https://arize.com/docs/ax/improve/setup-agent-endpoint): AX POSTs
+your templated fields at the top level plus an injected `arize_metadata`
+block, and any JSON you return is stored verbatim as the experiment run. It
+also extracts AX's `traceparent`/`baggage` headers so the agent's spans nest
+under AX's experiment-run trace.
+
+Vercel's Python runtime auto-detects the FastAPI `app` in `server.py` and
+reads dependencies straight from `pyproject.toml` + `uv.lock` — no
+`requirements.txt` needed. `vercel.json` just raises `maxDuration` to 60s for
+the tool-calling loop.
+
+**Deploy:**
+```bash
+npx vercel login             # one-time, browser auth
+npx vercel link              # link to your existing Vercel project
+npx vercel target add eval   # if deploying to a custom environment (Pro/Enterprise)
+
+# Set these per environment (interactively, so keys never land in shell history):
+npx vercel env add OPENAI_API_KEY eval
+npx vercel env add ARIZE_API_KEY eval
+npx vercel env add ARIZE_SPACE_ID eval
+npx vercel env add ARIZE_PROJECT_NAME eval   # e.g. credit-coach-agent
+
+npx vercel deploy --target=eval
+```
+
+**Register in Arize AX:** `More > Remote Agents > New Remote Agent` —
+- Endpoint URL: `https://<your-deployment>.vercel.app/remote-agent`
+- Input Schema (excludes `arize_metadata` — AX injects that itself):
+  ```json
+  {
+    "type": "object",
+    "properties": {
+      "user_id": {"type": "string"},
+      "message": {"type": "string"},
+      "history": {"type": "array", "items": {"type": "object"}}
+    },
+    "required": ["user_id", "message"]
+  }
+  ```
+- No auth header is checked by `server.py` in this demo — add a bearer token
+  in AX's Add Header section and validate it in `server.py` before pointing
+  this at anything beyond a throwaway demo.
+
+Once registered, the agent is selectable from any dataset's "New Experiment
+→ Run in Agent Playground" flow, and each row becomes one experiment run.
+
 ## Demo prompts for richer traces
 
 Every turn now always opens an `input_guardrail` span before the LLM loop
@@ -163,7 +213,8 @@ instead of scattered, unrelated traces.
 | `tools.py` | 4 tool schemas + dispatch; nests fake `mcp.*`/`db.*` spans for DB-backed tools |
 | `guardrails.py` | the 2 input/output guardrails, each its own `GUARDRAIL` span |
 | `agent.py` | the agent's tool-calling loop, wired through both guardrails |
-| `server.py` | `POST /chat` FastAPI wrapper for live demos |
+| `server.py` | `POST /chat` FastAPI wrapper for live demos; `POST /remote-agent` for AX Remote Agent experiments |
+| `vercel.json` | Vercel deploy config (`maxDuration`) for `server.py` as an AX Remote Agent |
 | `dataset_gen.py` | synthetic dataset builder + Arize upload; also `COMPOUND_PROMPTS`/`GUARDRAIL_PROMPTS` |
 | `evaluators.py` | the 4 evaluator functions |
 | `run_experiment.py` | runs the agent over the dataset, logs the experiment |

@@ -6,6 +6,11 @@ is read straight off the `host` `AGENT` span's `hops` attribute — check that
 directly in Arize AX rather than eyeballing the tree; it's the fastest way to
 confirm what actually happened.
 
+To fire them as grouped multi-turn conversations instead of pasting one at a
+time, run `uv run python generate_sessions.py`. That script's six journeys
+are these prompts (plus a few neighbors from `data/eval_dataset.json`)
+arranged as 4-turn sessions.
+
 ## Baseline: one hop
 
 ```

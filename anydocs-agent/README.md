@@ -22,6 +22,7 @@ uv run python cli.py --selftest
 uv run python cli.py                       # interactive REPL
 uv run python -m pytest -q                 # offline test suite
 uv run python run_experiment.py            # offline eval (needs Arize creds)
+uv run python generate_sessions.py         # 6 multi-turn AX sessions (needs Arize creds)
 ```
 
 Every value in `.env` is optional. With no `OPENAI_API_KEY`, embeddings fall back to
@@ -33,7 +34,21 @@ doesn't export.
 
 See [`EXAMPLE_PROMPTS.md`](EXAMPLE_PROMPTS.md) for prompts known to produce each
 interesting trace shape — multi-hop delegation, the guardrail refusal, the MCP
-cross-process branch — instead of guessing.
+cross-process branch — instead of guessing. For a live customer demo, skip the
+REPL and seed AX directly:
+
+```bash
+uv run python generate_sessions.py                 # one of each journey (6 sessions × 4 turns)
+uv run python generate_sessions.py --sessions 3    # faster smoke
+```
+
+That groups every turn of one persona under a single `session.id` so AX's
+Sessions view is a conversation, not 24 unrelated traces. The six journeys
+cover the workflows you'd actually walk a customer through: span taxonomy,
+online vs offline evals, the reliability loop, MCP client/server tracing,
+compound multi-hop retrieval, and a coverage-boundary refusal. Multi-hop
+traces need `OPENAI_API_KEY`; without it the sessions still export, but every
+turn takes exactly one hop.
 
 ## The span tree
 
@@ -141,6 +156,7 @@ took two things, not one:
 | `evaluators/` | the offline eval's code eval + LLM judge |
 | `run_experiment.py` | uploads the offline eval as an Arize experiment |
 | `cli.py` | REPL / `--selftest` entry point |
+| `generate_sessions.py` | multi-turn demo conversations, grouped by `session.id` |
 | `data/docs/` | the bundled corpus |
 | `data/eval_dataset.json` | the offline eval's dataset |
 

@@ -12,17 +12,22 @@ OpenTelemetry) for five agentic use cases:
   4. Attack Surface Reduction         -> attack-surface-agent
   5. Agentic Access Policy Enforcement -> policy-enforcement-agent
 
-Each "run" is one AGENT-rooted trace with LLM / TOOL / RETRIEVER child
-spans, sent to Arize with synthetic (backdated) timestamps so the
-Tracing tab looks like a few days of real production activity instead
-of one burst of identical-looking traces.
+Each scenario is generated as a multi-turn **session**: 2-4 AGENT-rooted
+traces that share one `session.id`, spaced out in time like a real
+back-and-forth between a security analyst and the agent (kickoff ask,
+then follow-up asks that reference the prior turn's finding). Each
+trace has LLM / TOOL / RETRIEVER child spans, sent to Arize with
+synthetic (backdated) timestamps so the Tracing tab looks like a few
+days of real production activity instead of one burst of
+identical-looking, single-turn traces.
 
 Setup
 -----
     pip install -r requirements.txt
 
 Configure via .env in this directory (ARIZE_SPACE_ID, ARIZE_API_KEY,
-ARIZE_PROJECT_NAME). Optional: RUNS_PER_SCENARIO, HOURS_OF_HISTORY.
+ARIZE_PROJECT_NAME). Optional: SESSIONS_PER_SCENARIO, TURNS_PER_SESSION_MIN,
+TURNS_PER_SESSION_MAX, HOURS_OF_HISTORY.
 
 Run:
     python generate_security_demo_traces.py
@@ -52,7 +57,9 @@ load_dotenv(ROOT / ".env", override=True)
 SPACE_ID = os.environ.get("ARIZE_SPACE_ID", "").strip()
 API_KEY = os.environ.get("ARIZE_API_KEY", "").strip()
 PROJECT_NAME = os.environ.get("ARIZE_PROJECT_NAME", "security-agent").strip()
-RUNS_PER_SCENARIO = int(os.environ.get("RUNS_PER_SCENARIO", 5))
+SESSIONS_PER_SCENARIO = int(os.environ.get("SESSIONS_PER_SCENARIO", 5))
+TURNS_PER_SESSION_MIN = int(os.environ.get("TURNS_PER_SESSION_MIN", 2))
+TURNS_PER_SESSION_MAX = int(os.environ.get("TURNS_PER_SESSION_MAX", 4))
 HOURS_OF_HISTORY = int(os.environ.get("HOURS_OF_HISTORY", 72))
 
 if not SPACE_ID or not API_KEY:
@@ -456,14 +463,93 @@ SCENARIOS = {
     },
 }
 
+# Opening ask for turn 1 of a session, per scenario.
+KICKOFF_PROMPTS = {
+    "vendor_risk_assessment": "Run a risk assessment refresh on",
+    "ai_discovery": "Check whether there's any shadow AI usage from",
+    "blast_radius": "Run a blast-radius impact analysis for",
+    "attack_surface": "Review the attack surface / access footprint for",
+    "policy_enforcement": "Check access policy compliance for",
+}
+
+# Analyst follow-up asks for turn 2+ of a session, per scenario. Cycled
+# through in order so a 3-4 turn session reads like a real back-and-forth
+# rather than a repeat of turn 1. `{vendor}` is filled in at generation time.
+FOLLOW_UPS = {
+    "vendor_risk_assessment": [
+        "Can you double check that? Anything new on {vendor} since last time?",
+        "Ops says they patched the issue — please re-verify and update the score.",
+        "One more pass before we close this out — did the remediation hold?",
+    ],
+    "ai_discovery": [
+        "Are you sure? {vendor} claims they don't send data to a third-party LLM — check again.",
+        "Legal wants a follow-up: has {vendor} disclosed this sub-processor yet?",
+        "Re-scan {vendor} now that the DPA amendment should be in place.",
+    ],
+    "blast_radius": [
+        "What if {vendor} rotates their API tokens — does that change the blast radius?",
+        "IT revoked some of the shared SSO scopes for {vendor}. Re-run the impact analysis.",
+        "Double check the downstream integration list for {vendor}, it looked incomplete.",
+    ],
+    "attack_surface": [
+        "Did the remediation ticket actually get resolved for {vendor}?",
+        "Check again post-offboarding — are those scopes still live for {vendor}?",
+        "Confirm the deprovisioning recommendation was applied to {vendor}.",
+    ],
+    "policy_enforcement": [
+        "Has {vendor} pushed back on the enforcement action? Check current status.",
+        "On-call says they fixed the permissions issue for {vendor} — please verify.",
+        "Re-evaluate {vendor} now that the token rotation policy changed.",
+    ],
+}
+
+
+def _sample_session_hours_ago(hours_of_history):
+    """Sample how far back (in hours) a session should start, biased
+    toward recent activity with a long tail back to `hours_of_history`.
+
+    Uses an exponential distribution instead of a uniform one so the
+    Tracing tab looks like steady, ongoing traffic — most sessions land
+    in roughly the last quarter of the window, with a shrinking tail of
+    older sessions stretching back the full `hours_of_history` — rather
+    than a flat, equally-likely-any-time-in-3-days spread where any
+    given recent window (e.g. "the last hour") is very sparsely
+    populated.
+    """
+    mean_hours = max(hours_of_history / 6.0, 0.1)
+    hours_ago = random.expovariate(1.0 / mean_hours)
+    return min(max(hours_ago, 0.05), hours_of_history)
+
+
+def build_session_turn_starts(now, turns_total, hours_of_history):
+    """Pick a backdated session start time (recency-biased across the
+    last `hours_of_history` hours — see `_sample_session_hours_ago`),
+    then space the turns *within* that session a realistic
+    conversational distance apart — tens of seconds to a few minutes.
+
+    Keeping intra-session gaps small (instead of hours) keeps the total
+    session duration short. Arize's session view renders a duration-based
+    timeline; a multi-hour synthetic session can break that rendering or
+    leave the session row blank, even though the individual traces are
+    all valid and correctly tagged with the same session.id.
+    """
+    hours_ago = _sample_session_hours_ago(hours_of_history)
+    starts = [now - timedelta(hours=hours_ago)]
+    for _ in range(1, turns_total):
+        gap = timedelta(seconds=random.uniform(20, 240))
+        nxt = starts[-1] + gap
+        nxt = min(nxt, now - timedelta(seconds=5))
+        starts.append(nxt)
+    return starts
+
 
 # ---------------------------------------------------------------------------
 # 4. Trace runner — wraps a scenario in its AGENT root span + session/tags
 # ---------------------------------------------------------------------------
 
-def run_trace(scenario_key, vendor, start_dt, variant):
+def run_trace(scenario_key, vendor, start_dt, variant, session_id, turn_idx,
+              turns_total, prior_summary=None):
     cfg = SCENARIOS[scenario_key]
-    session_id = f"{scenario_key}-{vendor['slug']}-{uuid.uuid4().hex[:8]}"
 
     with using_session(session_id=session_id), \
          using_metadata({
@@ -472,23 +558,42 @@ def run_trace(scenario_key, vendor, start_dt, variant):
              "vendor_category": vendor["category"],
              "use_case": cfg["use_case"],
              "org": ORG_NAME,
+             "turn.index": turn_idx,
+             "turn.count": turns_total,
          }), \
          using_tags([cfg["use_case"], vendor["slug"]]):
 
+        if turn_idx == 0:
+            human_ask = f"{KICKOFF_PROMPTS[scenario_key]} {vendor['name']}."
+        else:
+            phrasing = FOLLOW_UPS[scenario_key][(turn_idx - 1) % len(FOLLOW_UPS[scenario_key])]
+            human_ask = phrasing.format(vendor=vendor["name"])
+        agent_input = f"Security analyst (turn {turn_idx + 1}/{turns_total}): {human_ask}"
+
         agent_cm, agent_span = open_span(
             cfg["agent_name"], "agent", start_dt,
-            attributes={
-                SpanAttributes.INPUT_VALUE: f"Run {cfg['agent_name']} for vendor {vendor['name']}",
-            },
+            attributes={SpanAttributes.INPUT_VALUE: agent_input},
         )
         cursor = start_dt + timedelta(milliseconds=50)
+
+        if turn_idx > 0 and prior_summary:
+            cursor = llm_leaf(
+                "recall_session_context", cursor, random.uniform(0.2, 0.5),
+                model="claude-sonnet-4-5",
+                prompt=f"Turn {turn_idx + 1}/{turns_total} of this session for "
+                       f"{vendor['name']}. Prior finding: {prior_summary}",
+                completion=f"Understood — continuing the {cfg['use_case'].replace('-', ' ')} "
+                           f"session for {vendor['name']} with that context.",
+                prompt_tokens=random.randint(80, 130), completion_tokens=random.randint(20, 40),
+            )
+
         cursor, final_output, had_error = cfg["fn"](vendor, cursor, variant)
         agent_span.set_attribute(SpanAttributes.OUTPUT_VALUE, final_output)
         close_span(
             agent_cm, agent_span, cursor + timedelta(milliseconds=50),
             error="one or more downstream steps failed" if had_error else None,
         )
-    return cursor
+    return cursor, final_output
 
 
 # ---------------------------------------------------------------------------
@@ -496,23 +601,40 @@ def run_trace(scenario_key, vendor, start_dt, variant):
 # ---------------------------------------------------------------------------
 
 def main():
-    print(f"Generating demo traces -> Arize project '{PROJECT_NAME}'\n")
+    print(f"Generating demo sessions -> Arize project '{PROJECT_NAME}'\n")
     now = datetime.now(timezone.utc)
     trace_count = 0
+    session_count = 0
 
     for scenario_key, cfg in SCENARIOS.items():
-        for variant in range(RUNS_PER_SCENARIO):
+        for _ in range(SESSIONS_PER_SCENARIO):
             vendor = random.choice(VENDORS)
-            start_dt = now - timedelta(hours=random.uniform(0.05, HOURS_OF_HISTORY))
-            run_trace(scenario_key, vendor, start_dt, variant)
-            trace_count += 1
-            print(f"  [{trace_count:02d}] {cfg['agent_name']:<28} "
-                  f"vendor={vendor['name']:<20} start={start_dt.isoformat(timespec='seconds')}")
+            turns_total = random.randint(TURNS_PER_SESSION_MIN, TURNS_PER_SESSION_MAX)
+            turn_starts = build_session_turn_starts(now, turns_total, HOURS_OF_HISTORY)
+            session_id = f"{scenario_key}-{vendor['slug']}-{uuid.uuid4().hex[:8]}"
+            session_count += 1
+            print(f"Session {session_count:02d}: {cfg['agent_name']:<28} "
+                  f"vendor={vendor['name']:<20} turns={turns_total}")
+
+            prior_summary = None
+            for turn_idx, turn_start in enumerate(turn_starts):
+                variant = random.randint(0, 4)
+                _, final_output = run_trace(
+                    scenario_key, vendor, turn_start, variant,
+                    session_id=session_id, turn_idx=turn_idx, turns_total=turns_total,
+                    prior_summary=prior_summary,
+                )
+                prior_summary = final_output
+                trace_count += 1
+                print(f"    [{trace_count:03d}] turn {turn_idx + 1}/{turns_total} "
+                      f"start={turn_start.isoformat(timespec='seconds')}")
 
     tracer_provider.force_flush()
-    print(f"\nDone — emitted {trace_count} traces across {len(SCENARIOS)} agent use cases.")
+    print(f"\nDone — emitted {trace_count} traces across {session_count} sessions "
+          f"({len(SCENARIOS)} agent use cases).")
     print(f"Open Arize AX -> Project '{PROJECT_NAME}' -> Tracing to view them.")
-    print("Filter/group by the 'use_case' or 'vendor' tags to walk through each scenario.")
+    print("Group by session to see the multi-turn conversations; filter by the "
+          "'use_case' or 'vendor' tags to walk through each scenario.")
 
 
 if __name__ == "__main__":

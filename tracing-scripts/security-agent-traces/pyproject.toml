@@ -1,0 +1,14 @@
+[project]
+name = "security-agent-traces"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = [
+    "arize-otel",
+    "openinference-semantic-conventions",
+    "openinference-instrumentation",
+    "opentelemetry-sdk",
+    "python-dotenv",
+]
+
+[tool.uv]
+package = false

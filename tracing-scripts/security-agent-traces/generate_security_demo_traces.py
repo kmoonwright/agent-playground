@@ -23,14 +23,14 @@ identical-looking, single-turn traces.
 
 Setup
 -----
-    pip install -r requirements.txt
+    uv sync
 
 Configure via .env in this directory (ARIZE_SPACE_ID, ARIZE_API_KEY,
 ARIZE_PROJECT_NAME). Optional: SESSIONS_PER_SCENARIO, TURNS_PER_SESSION_MIN,
 TURNS_PER_SESSION_MAX, HOURS_OF_HISTORY.
 
 Run:
-    python generate_security_demo_traces.py
+    uv run generate_security_demo_traces.py
 
 Then open Arize AX -> your Space -> the configured project -> Tracing.
 Use the `use_case` and `vendor` tags/metadata to filter by scenario in the UI.

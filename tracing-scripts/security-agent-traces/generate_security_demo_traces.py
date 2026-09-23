@@ -29,6 +29,13 @@ Configure via .env in this directory (ARIZE_SPACE_ID, ARIZE_API_KEY,
 ARIZE_PROJECT_NAME). Optional: SESSIONS_PER_SCENARIO, TURNS_PER_SESSION_MIN,
 TURNS_PER_SESSION_MAX, HOURS_OF_HISTORY.
 
+By default, session start times are recency-biased relative to *now* (most
+land within the last HOURS_OF_HISTORY/6 hours, with a tail back to
+HOURS_OF_HISTORY). To instead spread sessions uniformly across a fixed
+historical date range (e.g. backfilling a specific week), set both
+BACKDATE_START and BACKDATE_END (YYYY-MM-DD, UTC, inclusive) in .env —
+this overrides HOURS_OF_HISTORY and the recency bias entirely.
+
 Run:
     uv run generate_security_demo_traces.py
 
@@ -61,12 +68,27 @@ SESSIONS_PER_SCENARIO = int(os.environ.get("SESSIONS_PER_SCENARIO", 5))
 TURNS_PER_SESSION_MIN = int(os.environ.get("TURNS_PER_SESSION_MIN", 2))
 TURNS_PER_SESSION_MAX = int(os.environ.get("TURNS_PER_SESSION_MAX", 4))
 HOURS_OF_HISTORY = int(os.environ.get("HOURS_OF_HISTORY", 72))
+BACKDATE_START = os.environ.get("BACKDATE_START", "").strip()
+BACKDATE_END = os.environ.get("BACKDATE_END", "").strip()
 
 if not SPACE_ID or not API_KEY:
     raise SystemExit(
         f"ARIZE_SPACE_ID and ARIZE_API_KEY are required. "
         f"Put them in {ROOT / '.env'} and re-run."
     )
+
+if bool(BACKDATE_START) != bool(BACKDATE_END):
+    raise SystemExit(
+        "Set both BACKDATE_START and BACKDATE_END (YYYY-MM-DD) to backfill a "
+        "fixed date range, or leave both unset to use HOURS_OF_HISTORY."
+    )
+
+
+def _parse_date_utc(date_str, end_of_day=False):
+    dt = datetime.strptime(date_str, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+    if end_of_day:
+        dt = dt + timedelta(days=1) - timedelta(seconds=1)
+    return dt
 
 tracer_provider = register(
     space_id=SPACE_ID,
@@ -521,11 +543,19 @@ def _sample_session_hours_ago(hours_of_history):
     return min(max(hours_ago, 0.05), hours_of_history)
 
 
-def build_session_turn_starts(now, turns_total, hours_of_history):
-    """Pick a backdated session start time (recency-biased across the
-    last `hours_of_history` hours — see `_sample_session_hours_ago`),
-    then space the turns *within* that session a realistic
-    conversational distance apart — tens of seconds to a few minutes.
+def build_session_turn_starts(window_start, window_end, turns_total, recency_biased=True):
+    """Pick a session start time within [window_start, window_end], then
+    space the turns *within* that session a realistic conversational
+    distance apart — tens of seconds to a few minutes.
+
+    Two modes:
+    - recency_biased=True: `window_end` is treated as "now" and the
+      session start is exponentially biased toward it (see
+      `_sample_session_hours_ago`), with a tail back to `window_start`.
+      This is the default "last N hours, feels like live traffic" mode.
+    - recency_biased=False: the session start is drawn uniformly across
+      [window_start, window_end], for backfilling a fixed historical
+      date range with an even spread (no bias toward either end).
 
     Keeping intra-session gaps small (instead of hours) keeps the total
     session duration short. Arize's session view renders a duration-based
@@ -533,12 +563,22 @@ def build_session_turn_starts(now, turns_total, hours_of_history):
     leave the session row blank, even though the individual traces are
     all valid and correctly tagged with the same session.id.
     """
-    hours_ago = _sample_session_hours_ago(hours_of_history)
-    starts = [now - timedelta(hours=hours_ago)]
+    if recency_biased:
+        hours_of_history = (window_end - window_start).total_seconds() / 3600
+        hours_ago = _sample_session_hours_ago(hours_of_history)
+        session_start = window_end - timedelta(hours=hours_ago)
+    else:
+        # Leave a little headroom before window_end so a multi-turn
+        # session's later turns don't get clamped past it.
+        latest_start = max(window_end - timedelta(minutes=15), window_start)
+        span_seconds = max((latest_start - window_start).total_seconds(), 0)
+        session_start = window_start + timedelta(seconds=random.uniform(0, span_seconds))
+
+    starts = [session_start]
     for _ in range(1, turns_total):
         gap = timedelta(seconds=random.uniform(20, 240))
         nxt = starts[-1] + gap
-        nxt = min(nxt, now - timedelta(seconds=5))
+        nxt = min(nxt, window_end - timedelta(seconds=5))
         starts.append(nxt)
     return starts
 
@@ -601,8 +641,27 @@ def run_trace(scenario_key, vendor, start_dt, variant, session_id, turn_idx,
 # ---------------------------------------------------------------------------
 
 def main():
-    print(f"Generating demo sessions -> Arize project '{PROJECT_NAME}'\n")
     now = datetime.now(timezone.utc)
+
+    if BACKDATE_START and BACKDATE_END:
+        window_start = _parse_date_utc(BACKDATE_START)
+        window_end = _parse_date_utc(BACKDATE_END, end_of_day=True)
+        if window_start > window_end:
+            raise SystemExit(
+                f"BACKDATE_START ({BACKDATE_START}) is after BACKDATE_END "
+                f"({BACKDATE_END})."
+            )
+        recency_biased = False
+        print(
+            f"Generating demo sessions -> Arize project '{PROJECT_NAME}' "
+            f"(backdated {BACKDATE_START} to {BACKDATE_END}, UTC)\n"
+        )
+    else:
+        window_start = now - timedelta(hours=HOURS_OF_HISTORY)
+        window_end = now
+        recency_biased = True
+        print(f"Generating demo sessions -> Arize project '{PROJECT_NAME}'\n")
+
     trace_count = 0
     session_count = 0
 
@@ -610,7 +669,9 @@ def main():
         for _ in range(SESSIONS_PER_SCENARIO):
             vendor = random.choice(VENDORS)
             turns_total = random.randint(TURNS_PER_SESSION_MIN, TURNS_PER_SESSION_MAX)
-            turn_starts = build_session_turn_starts(now, turns_total, HOURS_OF_HISTORY)
+            turn_starts = build_session_turn_starts(
+                window_start, window_end, turns_total, recency_biased=recency_biased
+            )
             session_id = f"{scenario_key}-{vendor['slug']}-{uuid.uuid4().hex[:8]}"
             session_count += 1
             print(f"Session {session_count:02d}: {cfg['agent_name']:<28} "

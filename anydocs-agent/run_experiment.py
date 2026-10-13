@@ -39,14 +39,44 @@ async def _answer_question(question: str) -> dict:
     return {"answer": answer, "citations": citations, "refused": not citations}
 
 
+def _prompt(dataset_row: dict) -> str:
+    question = dataset_row.get("question")
+    if isinstance(question, str) and question.strip():
+        return question
+    # AX exports and the experiments SDK flatten user columns. Security Agent
+    # Regression stores the agent prompt here rather than under "question".
+    prompt = dataset_row.get("attributes.input.value")
+    if isinstance(prompt, str) and prompt.strip():
+        return prompt
+    raise KeyError("dataset row has neither 'question' nor 'attributes.input.value'")
+
+
 async def task(dataset_row: dict) -> dict:
-    return await _answer_question(dataset_row["question"])
+    return await _answer_question(_prompt(dataset_row))
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Run the offline eval experiment.")
     parser.add_argument("--dry-run", action="store_true", help="run locally without persisting the experiment")
     parser.add_argument("--concurrency", type=int, default=1)
+    parser.add_argument(
+        "--dataset",
+        help="existing Arize dataset name or id. Default: upload data/eval_dataset.json as a new dataset",
+    )
+    parser.add_argument(
+        "--space",
+        help="space name or id. Required to resolve --dataset by name when it is not the space in .env",
+    )
+    parser.add_argument(
+        "--experiment-name",
+        default=EXPERIMENT_NAME,
+        help="experiment name uploaded to Arize",
+    )
+    parser.add_argument(
+        "--no-evaluators",
+        action="store_true",
+        help="run the agent task only. Use this when the dataset has no expected_doc_id / expected_answer_summary columns",
+    )
     args = parser.parse_args(argv)
 
     config.require_arize()
@@ -54,22 +84,28 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         client = ArizeClient(api_key=config.arize_api_key())
-        rows = json.loads(config.EVAL_DATASET_PATH.read_text())
-        # Dataset names must be unique per space — suffix so re-running this
-        # script doesn't collide with the previous run's dataset.
-        dataset_name = f"{DATASET_NAME}-{uuid.uuid4().hex[:8]}"
-        dataset = client.datasets.create(space=config.arize_space_id(), name=dataset_name, examples=rows)
+        space = args.space or config.arize_space_id()
+        if args.dataset:
+            dataset_id = args.dataset
+        else:
+            rows = json.loads(config.EVAL_DATASET_PATH.read_text())
+            # Dataset names must be unique per space — suffix so re-running this
+            # script doesn't collide with the previous run's dataset.
+            dataset_name = f"{DATASET_NAME}-{uuid.uuid4().hex[:8]}"
+            dataset = client.datasets.create(space=space, name=dataset_name, examples=rows)
+            dataset_id = dataset.id
         _experiment, df = client.experiments.run(
-            name=EXPERIMENT_NAME,
-            dataset=dataset.id,
-            space=config.arize_space_id(),
+            name=args.experiment_name,
+            dataset=dataset_id,
+            space=space,
             task=task,
-            evaluators=EVALUATORS,
+            evaluators=None if args.no_evaluators else EVALUATORS,
             concurrency=args.concurrency,
             dry_run=args.dry_run,
         )
         eval_columns = [c for c in df.columns if c.startswith("eval.")]
-        print(df[["example_id", *eval_columns]].to_string() if not df.empty else "no rows")
+        show = ["example_id", *eval_columns] if eval_columns else ["example_id", "output"]
+        print(df[show].to_string() if not df.empty else "no rows")
     finally:
         instrumentation.flush_tracing()
     return 0
